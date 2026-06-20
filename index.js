@@ -29,18 +29,22 @@ function cleanLockFiles() {
 }
 
 console.log("🚀 Starting WhatsApp AI Bot...");
-cleanLockFiles();
 
-let currentQR = null;
-let isConnected = false;
-
-app.get("/", async (req, res) => {
-    if (isConnected) return res.send("<h1>✅ البوت متصل!</h1>");
-    if (!currentQR) return res.send("<h1>⏳ جاري تجهيز الـ QR...</h1>");
-    const qrImage = await QRCode.toDataURL(currentQR);
-    res.send(`<h1>📱 امسح الـ QR</h1><img src="${qrImage}"/>`);
-});
-
+function cleanLockFiles() {
+    const lockFiles = ["SingletonLock", "SingletonCookie", "SingletonSocket", ".lock"];
+    lockFiles.forEach(file => {
+        const filePath = path.join(SESSION_PATH, file);
+        if (fs.existsSync(filePath)) {
+            try {
+                // استخدام unlinkSync هو الصح
+                fs.unlinkSync(filePath);
+                console.log(`🧹 تم حذف ملف القفل القديم: ${file}`);
+            } catch (e) {
+                console.error(`⚠️ تعذر حذف ${file} (غالباً مفتوح):`, e.message);
+            }
+        }
+    });
+}
 app.listen(PORT, () => console.log(`🌐 الصفحة شغالة على port ${PORT}`));
 
 const client = new Client({
