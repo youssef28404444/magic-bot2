@@ -2,23 +2,17 @@ const { Client, LocalAuth } = require("whatsapp-web.js");
 const axios = require("axios");
 const qrcode = require("qrcode-terminal");
 
-// ✅ رابط n8n Webhook - اتحط في Environment Variables على Railway
+// ✅ رابط n8n Webhook
 const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || "http://localhost:5678/webhook/custom_wa_bot";
-
-// ✅ قائمة الأرقام المسموح ليها (ممكن تحطها في ENV كمان)
-const WHITE_LIST_RAW = process.env.WHITE_LIST || "919423177880,917057758867";
-const white_list_responders = WHITE_LIST_RAW.split(",").map(n => n.trim() + "@c.us");
 
 console.log("🚀 Starting WhatsApp AI Bot...");
 console.log("📡 n8n Webhook URL:", N8N_WEBHOOK_URL);
-console.log("✅ Whitelisted numbers:", white_list_responders);
 
 const client = new Client({
   authStrategy: new LocalAuth({
     dataPath: process.env.SESSION_PATH || "./.wwebjs_auth"
   }),
   puppeteer: {
-    // ✅ ضروري على Railway وأي بيئة Linux/Docker
     headless: true,
     args: [
       "--no-sandbox",
@@ -62,26 +56,15 @@ client.on("message_create", async (msg) => {
     return;
   }
 
-  // رسائل جروب
+  // تجاهل رسائل الجروبات
   if (msg.from.includes("@g.us")) {
-    console.log("👥 رسالة جروب");
-    const mentionedIds = msg.mentionedIds || [];
-    const isWhiteListed = mentionedIds.some(
-      (id) => white_list_responders.includes(id)
-    );
-    if (isWhiteListed) {
-      await respond_to_message(msg);
-    }
-  } else {
-    // رسائل شخصية
-    console.log("💬 رسالة شخصية");
-    if (white_list_responders.includes(msg.from)) {
-      console.log("✅ الرقم في الـ Whitelist");
-      await respond_to_message(msg);
-    } else {
-      console.log("🚫 الرقم مش في الـ Whitelist:", msg.from);
-    }
+    console.log("👥 رسالة جروب - تم تجاهلها");
+    return;
   }
+
+  // رد على كل الرسائل الشخصية
+  console.log("💬 رسالة شخصية - جاري الرد...");
+  await respond_to_message(msg);
 });
 
 const respond_to_message = async (msg) => {
@@ -100,7 +83,7 @@ const respond_to_message = async (msg) => {
 
   try {
     const response = await axios.post(N8N_WEBHOOK_URL, data, {
-      timeout: 30000, // 30 ثانية timeout
+      timeout: 30000,
     });
 
     console.log("📥 الرد من n8n:", response.data);
