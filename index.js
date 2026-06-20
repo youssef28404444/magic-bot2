@@ -23,10 +23,12 @@ const EXPRESS_PORT = 3000;
 // ─── WHATSAPP CLIENT ─────────────────────────────────────────────────────────
 
 const client = new Client({
-  authStrategy: new LocalAuth({
-    // Session data is saved under ./.wwebjs_auth/
-    dataPath: './.wwebjs_auth',
-  }),
+    authStrategy: new LocalAuth(),
+    puppeteer: {
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH, // هيجيب المسار من الـ Dockerfile
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+    }
+});
   puppeteer: {
     // Run headless Chrome inside Docker / servers with no display
     args: ['--no-sandbox', '--disable-setuid-sandbox'],
