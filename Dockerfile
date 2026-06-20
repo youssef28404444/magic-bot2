@@ -32,6 +32,8 @@ RUN apt-get update && apt-get install -y \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
+# ... (باقي كود التثبيت بتاعك فوق)
+
 WORKDIR /app
 
 COPY package.json ./
@@ -39,9 +41,10 @@ RUN npm install --production
 
 COPY . .
 
-# ✅ مجلد لحفظ Session الواتساب
-RUN mkdir -p .wwebjs_auth && chmod 777 .wwebjs_auth
+# إنشاء المجلد وصلاحياته
+RUN mkdir -p /app/.wwebjs_auth && chmod -R 777 /app/.wwebjs_auth
 
 EXPOSE 3000
 
-CMD ["node", "index.js"]
+# ده السطر الوحيد اللي المفروض يكون موجود في الآخر للتشغيل
+CMD ["sh", "-c", "chmod -R 777 /app/.wwebjs_auth && node index.js"]
