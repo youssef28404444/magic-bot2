@@ -8,7 +8,7 @@ const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const N8N_WEBHOOK_URL = "https://youssef28505.app.n8n.cloud/webhook-test/custom_wa_bot";
+const N8N_WEBHOOK_URL = "https://youssef28505.app.n8n.cloud/webhook/custom_wa_bot";
 const SESSION_PATH = "/app/.wwebjs_auth";
 
 // تعريف المتغيرات المفقودة
