@@ -8,7 +8,8 @@ const path = require("path");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || "http://localhost:5678/webhook/custom_wa_bot";
+// غير السطر ده في الكود عندك
+const N8N_WEBHOOK_URL = "https://youssef28505.app.n8n.cloud/webhook-test/custom_wa_bot";
 
 // المسار الذي سيتم ربطه بالفوليوم في Railway
 const SESSION_PATH = "/app/.wwebjs_auth";
