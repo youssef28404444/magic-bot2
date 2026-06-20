@@ -51,18 +51,16 @@ app.listen(PORT, () => console.log(`🌐 الصفحة شغالة على port ${P
 // إعداد البوت
 const client = new Client({
     authStrategy: new LocalAuth({ 
-        dataPath: '/app/' // يتم إنشاء .wwebjs_auth هنا
+        dataPath: '/app/.wwebjs_auth' // حدد المسار كامل للفوليوم
     }),
     puppeteer: {
         headless: true,
+        // مهم جداً عشان يتجنب مشاكل الـ Sandbox في الـ Volume
         args: [
             "--no-sandbox",
             "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu",
-            "--no-zygote",
-            "--single-process"
-        ],
+            "--disable-dev-shm-usage"
+        ]
     },
 });
 
