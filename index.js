@@ -1,10 +1,106 @@
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const axios = require("axios");
 const qrcode = require("qrcode-terminal");
+const QRCode = require("qrcode");
+const express = require("express");
+
+const app = express();
+const PORT = process.env.PORT || 3000;
 
 // ✅ رابط n8n Webhook
 const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || "http://localhost:5678/webhook/custom_wa_bot";
 
+let currentQR = null;
+let isConnected = false;
+
+// ✅ صفحة الويب اللي بتعرض الـ QR
+app.get("/", async (req, res) => {
+  if (isConnected) {
+    return res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>WhatsApp Bot</title>
+        <style>
+          body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #111; color: #fff; }
+          .box { text-align: center; padding: 40px; border-radius: 16px; background: #1a1a1a; }
+          h1 { color: #25D366; font-size: 2rem; }
+          p { color: #aaa; }
+        </style>
+      </head>
+      <body>
+        <div class="box">
+          <h1>✅ WhatsApp متصل وشغال!</h1>
+          <p>البوت جاهز ويرد على الرسائل</p>
+        </div>
+      </body>
+      </html>
+    `);
+  }
+
+  if (!currentQR) {
+    return res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="refresh" content="5">
+        <title>WhatsApp Bot</title>
+        <style>
+          body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #111; color: #fff; }
+          .box { text-align: center; padding: 40px; border-radius: 16px; background: #1a1a1a; }
+          h1 { color: #f0a500; }
+          p { color: #aaa; }
+        </style>
+      </head>
+      <body>
+        <div class="box">
+          <h1>⏳ جاري تحميل الـ QR Code...</h1>
+          <p>الصفحة هتتحدث تلقائياً كل 5 ثواني</p>
+        </div>
+      </body>
+      </html>
+    `);
+  }
+
+  try {
+    const qrImage = await QRCode.toDataURL(currentQR);
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="refresh" content="30">
+        <title>WhatsApp Bot - امسح الـ QR</title>
+        <style>
+          body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #111; color: #fff; }
+          .box { text-align: center; padding: 40px; border-radius: 16px; background: #1a1a1a; }
+          h1 { color: #25D366; }
+          img { border-radius: 12px; margin: 20px 0; width: 280px; height: 280px; }
+          p { color: #aaa; font-size: 0.9rem; }
+        </style>
+      </head>
+      <body>
+        <div class="box">
+          <h1>📱 امسح الـ QR بواتساب</h1>
+          <img src="${qrImage}" alt="QR Code"/>
+          <p>واتساب ← الأجهزة المرتبطة ← ربط جهاز جديد</p>
+          <p>الصفحة بتتحدث تلقائياً كل 30 ثانية</p>
+        </div>
+      </body>
+      </html>
+    `);
+  } catch (err) {
+    res.send("خطأ في توليد الـ QR");
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`🌐 الصفحة شغالة على port ${PORT}`);
+});
+
+// ✅ WhatsApp Client
 console.log("🚀 Starting WhatsApp AI Bot...");
 console.log("📡 n8n Webhook URL:", N8N_WEBHOOK_URL);
 
@@ -28,20 +124,26 @@ const client = new Client({
 });
 
 client.on("qr", (qr) => {
-  console.log("\n📱 امسح الـ QR Code ده بواتساب بتاعك:");
+  currentQR = qr;
+  isConnected = false;
+  console.log("📱 QR Code جاهز - افتح الرابط العام على Railway وامسحه");
   qrcode.generate(qr, { small: true });
-  console.log("\n⚠️  لو شغال على Railway، افتح الـ Logs وامسح الـ QR من هناك\n");
 });
 
 client.on("ready", () => {
+  currentQR = null;
+  isConnected = true;
   console.log("✅ WhatsApp Client جاهز وشغال!");
 });
 
 client.on("auth_failure", (msg) => {
+  isConnected = false;
   console.error("❌ فشل في المصادقة:", msg);
 });
 
 client.on("disconnected", (reason) => {
+  isConnected = false;
+  currentQR = null;
   console.log("⚠️ انقطع الاتصال:", reason);
   console.log("🔄 جاري إعادة التشغيل...");
   client.initialize();
@@ -50,26 +152,23 @@ client.on("disconnected", (reason) => {
 client.on("message_create", async (msg) => {
   console.log(`📩 رسالة جديدة - من: ${msg.from} | النص: ${msg.body}`);
 
-  // تجاهل الرسائل اللي بعتها أنا
   if (msg.id.fromMe) {
     console.log("🔁 رسالة مني - تم تجاهلها");
     return;
   }
 
-  // تجاهل رسائل الجروبات
   if (msg.from.includes("@g.us")) {
     console.log("👥 رسالة جروب - تم تجاهلها");
     return;
   }
 
-  // رد على كل الرسائل الشخصية
   console.log("💬 رسالة شخصية - جاري الرد...");
   await respond_to_message(msg);
 });
 
 const respond_to_message = async (msg) => {
   if (!msg.body) {
-    console.log("⚠️ الرسالة فاضية، مفيش حاجة نبعتها لـ n8n");
+    console.log("⚠️ الرسالة فاضية");
     return;
   }
 
@@ -82,10 +181,7 @@ const respond_to_message = async (msg) => {
   console.log("📤 بعتالك لـ n8n:", data);
 
   try {
-    const response = await axios.post(N8N_WEBHOOK_URL, data, {
-      timeout: 30000,
-    });
-
+    const response = await axios.post(N8N_WEBHOOK_URL, data, { timeout: 30000 });
     console.log("📥 الرد من n8n:", response.data);
 
     const output = response.data?.output || response.data;
